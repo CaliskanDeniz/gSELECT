@@ -269,3 +269,29 @@ def run_explorative_gene_selections(expression_data, gene_mutual_information, nu
         executor.map(run_experiment, gene_selection_combinations)
 
     return results
+
+
+def run_explorative_gene_selections_with_custom_set(expression_data, selected_gene_names, gene_mutual_information, number_sweeps=5, num_threads=None):
+    gene_selection_combinations = []
+    num_genes = len(selected_gene_names)
+
+    for r in range(1, num_genes + 1):  # Generate subsets of size 1 to max
+        gene_selection_combinations.extend(combinations(selected_gene_names, r))
+
+    results = {}
+
+    def run_experiment(gene_subset):
+        print(f"Running experiment with gene subset: {gene_subset}")
+        results[tuple(gene_subset)] = run_with_custom_gene_set(
+            expression_data, list(gene_subset), gene_mutual_information, number_sweeps, include_random=False
+        )
+
+    if num_threads is None:
+        num_threads = max(2, os.cpu_count())
+
+    print(f"Using {num_threads} threads for parallel execution...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        executor.map(run_experiment, gene_selection_combinations)
+    
+    return results
