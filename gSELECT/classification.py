@@ -230,7 +230,7 @@ def run_multiple_gene_selections(expression_data, gene_mutual_information, numbe
     return results
 
 
-def run_explorative_gene_selections(expression_data, gene_mutual_information, number_sweeps=10, top_n_genes=5):
+def run_explorative_gene_selections(expression_data, gene_mutual_information, number_sweeps=10, top_n_genes=5, num_threads=None):
     """
     Run an exploratory analysis of gene selection.
     
@@ -247,15 +247,29 @@ def run_explorative_gene_selections(expression_data, gene_mutual_information, nu
         Number of classification sweeps.
     top_n_genes : int, optional (default=5)
         Number of top-ranked genes to explore in subset combinations.
+    num_threads : int, optional (default=None)
+        Number of parallel threads to use. If None, defaults to the number of available CPU cores.
     
     Returns:
     --------
     dict
         Mapping of gene subsets to classification results.
+
+    Notes:
+    ------
+    - The function generates all possible subsets, ranging from 
+      single-gene selections to the full set.
+    - Each subset is evaluated independently using `run_with_custom_gene_set`.
+    - The computation is parallelized using `ThreadPoolExecutor` to optimize performance.
+    - If `num_threads` is not specified, the function will automatically determine an 
+      appropriate number based on the system's CPU count.
     """
 
     gene_selection_combinations = generate_explorative_gene_selections(top_n_genes)
     top_genes = gene_mutual_information.nlargest(top_n_genes, "mutual information")["gene_name"].tolist()
+
+    if num_threads is None:
+        num_threads = max(2, os.cpu_count())
     
     results = {}
 
