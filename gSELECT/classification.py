@@ -7,7 +7,7 @@ import random
 import logging
 
 
-def run_gene_classification(expression_data, selected_gene_indices, gene_selection, number_sweeps=20):
+def run_gene_classification(expression_data, selected_gene_indices, gene_selection, number_sweeps=10):
     """
     Run gene classification using an MLP classifier.
     
@@ -23,7 +23,7 @@ def run_gene_classification(expression_data, selected_gene_indices, gene_selecti
         Indices of genes to be used for classification.
     gene_selection : int
         Mode of gene selection (0: selected genes, 1: random genes, 2: all non-constant genes).
-    number_sweeps : int, optional (default=20)
+    number_sweeps : int, optional (default=10)
         Number of iterations to run the classification.
     
     Returns:
@@ -82,7 +82,7 @@ def run_gene_classification(expression_data, selected_gene_indices, gene_selecti
     return r2_test, r2_train, gene_selection, number_wrongly_classified
 
 
-def run_all_genes(expression_data, gene_mutual_information, number_sweeps=5):
+def run_all_genes(expression_data, gene_mutual_information, number_sweeps=10):
     """
     Run classification using all non-constant genes.
     
@@ -95,7 +95,7 @@ def run_all_genes(expression_data, gene_mutual_information, number_sweeps=5):
         Gene expression data (cells x genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=5)
+    number_sweeps : int, optional (default=10)
         Number of classification sweeps.
     
     Returns:
@@ -116,7 +116,7 @@ def run_all_genes(expression_data, gene_mutual_information, number_sweeps=5):
     return [(r2_test, r2_train, gene_selection, number_wrongly_classified)]
 
 
-def run_selected_genes(expression_data, gene_mutual_information, number_sweeps=5, top_n_genes=1, include_random=True):
+def run_selected_genes(expression_data, gene_mutual_information, number_sweeps=10, top_n_genes=1, include_random=True):
     """
     Run classification using a subset of top-ranked genes.
     
@@ -129,7 +129,7 @@ def run_selected_genes(expression_data, gene_mutual_information, number_sweeps=5
         Gene expression data (cells x genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=5)
+    number_sweeps : int, optional (default=10)
         Number of classification sweeps.
     top_n_genes : int, optional (default=1)
         Number of top-ranked genes to use for classification.
@@ -159,7 +159,7 @@ def run_selected_genes(expression_data, gene_mutual_information, number_sweeps=5
     return results
 
 
-def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_information, number_sweeps=5, include_random=True):
+def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_information, number_sweeps=10, include_random=True):
     """
     Run classification using a custom gene set.
     
@@ -173,7 +173,7 @@ def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_i
         List of gene names to use for classification.
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=5)
+    number_sweeps : int, optional (default=10)
         Number of classification sweeps.
     include_random : bool, optional (default=True)
         Whether to also include a random selection of genes for comparison.
@@ -200,7 +200,7 @@ def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_i
     return results
 
 
-def run_multiple_gene_selections(expression_data, gene_mutual_information, number_sweeps=5, gene_selection=[1, 2, 3]):
+def run_multiple_gene_selections(expression_data, gene_mutual_information, number_sweeps=10, gene_selection=[1, 2, 3]):
     """
     Run multiple classification experiments with different gene selection sizes.
     
@@ -213,7 +213,7 @@ def run_multiple_gene_selections(expression_data, gene_mutual_information, numbe
         Gene expression data (cells x genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=5)
+    number_sweeps : int, optional (default=10)
         Number of classification sweeps.
     gene_selection : list of int, optional (default=[1, 2, 3])
         List of different gene selection sizes to test.
@@ -230,7 +230,7 @@ def run_multiple_gene_selections(expression_data, gene_mutual_information, numbe
     return results
 
 
-def run_explorative_gene_selections(expression_data, gene_mutual_information, number_sweeps=5, top_n_genes=5):
+def run_explorative_gene_selections(expression_data, gene_mutual_information, number_sweeps=10, top_n_genes=5):
     """
     Run an exploratory analysis of gene selection.
     
@@ -243,7 +243,7 @@ def run_explorative_gene_selections(expression_data, gene_mutual_information, nu
         Gene expression data (cells x genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=5)
+    number_sweeps : int, optional (default=10)
         Number of classification sweeps.
     top_n_genes : int, optional (default=5)
         Number of top-ranked genes to explore in subset combinations.
@@ -271,7 +271,43 @@ def run_explorative_gene_selections(expression_data, gene_mutual_information, nu
     return results
 
 
-def run_explorative_gene_selections_with_custom_set(expression_data, selected_gene_names, gene_mutual_information, number_sweeps=5, num_threads=None):
+def run_explorative_gene_selections_with_custom_set(expression_data, selected_gene_names, gene_mutual_information, number_sweeps=10, num_threads=None):
+    """
+    Perform an exploratory analysis of gene selection using a custom set of genes.
+    
+    This function evaluates all possible subsets of a user-defined gene list by 
+    iterating through different combinations of the selected genes and measuring 
+    their classification performance. The computation is parallelized using 
+    multi-threading to improve efficiency.
+
+    Parameters:
+    -----------
+    expression_data : np.ndarray
+        Gene expression data (cells x genes).
+    selected_gene_names : list of str
+        A list of gene names selected by the user for exploration.
+    gene_mutual_information : pd.DataFrame
+        DataFrame containing mutual information scores for genes.
+    number_sweeps : int, optional (default=10)
+        Number of classification sweeps to run for each gene subset.
+    num_threads : int, optional (default=None)
+        Number of parallel threads to use. If None, defaults to the number of available CPU cores.
+
+    Returns:
+    --------
+    dict
+        Mapping of gene subsets (as tuples) to classification results.
+
+    Notes:
+    ------
+    - The function generates all possible subsets of the provided gene set, ranging from 
+      single-gene selections to the full set.
+    - Each subset is evaluated independently using `run_with_custom_gene_set`.
+    - The computation is parallelized using `ThreadPoolExecutor` to optimize performance.
+    - If `num_threads` is not specified, the function will automatically determine an 
+      appropriate number based on the system's CPU count.
+    """
+
     gene_selection_combinations = []
     num_genes = len(selected_gene_names)
 
