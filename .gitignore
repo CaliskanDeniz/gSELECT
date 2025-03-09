@@ -1,0 +1,103 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+.env/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Log files
+logs/
+*.log
+*.out
+*.err
+*.txt
+
+# Unit test / coverage reports
+.coverage
+.tox/
+.nox/
+*.cover
+coverage.xml
+nosetests.xml
+pytest_cache/
+junit.xml
+htmlcov/
+
+# Editor / IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.bak
+
+# PyCharm
+*.iml
+*.iws
+.idea/
+
+# macOS
+.DS_Store
+*.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Jupyter Notebook outputs
+*.ipynb_checkpoints
+
+# PyPI distribution
+*.pypirc
+
+# HDF5 and AnnData files
+*.h5
+*.h5ad
+
+# Generated plots and images
+*.png
+*.svg
+*.jpg
+*.jpeg
+
+# gSELECT specific output files
+output/
+results/
+experiment_statistics.txt
+balanced_accuracy_test_train_plot.png
+misclassified_samples_plot.png
