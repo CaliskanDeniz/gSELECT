@@ -14,7 +14,15 @@ setup(
     url="https://github.com/caliskandeniz/gSELECT",
     packages=find_packages(),
     install_requires=[
-        "scanpy", "pandas", "numpy", "matplotlib", "scikit-learn", "polars"
+        "scanpy",
+        "pandas",
+        "numpy",
+        "matplotlib",
+        "scikit-learn",
+        "polars",
+        "seaborn",
+        "scipy",
+        "principal_feature_analysis"
     ],
     python_requires=">=3.7",
     classifiers=[
