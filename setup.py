@@ -20,7 +20,6 @@ setup(
         "matplotlib",
         "scikit-learn",
         "polars",
-        "seaborn",
         "scipy",
         "principal_feature_analysis"
     ],

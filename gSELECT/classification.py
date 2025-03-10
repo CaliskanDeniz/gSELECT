@@ -4,7 +4,6 @@ from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from sklearn import preprocessing
 import concurrent.futures
 import random
-import logging
 
 
 def run_gene_classification(expression_data, selected_gene_indices, gene_selection, number_sweeps=10):

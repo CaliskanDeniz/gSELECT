@@ -1,9 +1,7 @@
 import matplotlib.pyplot as plt
 from gSELECT.utils import get_unique_filename
-import seaborn as sns
 import os
 import numpy as np
-import logging
 
 
 def plot_results(results, output_folder="output"):

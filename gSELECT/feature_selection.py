@@ -3,7 +3,6 @@ import pandas as pd
 import os
 from scipy.sparse import issparse
 import principal_feature_analysis as pfa
-import logging
 
 
 def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_information, min_datapoints=500, basis_log=2, number_output_functions=1):

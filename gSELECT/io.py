@@ -2,7 +2,6 @@ import pandas as pd
 import scanpy as sc
 import polars as pl
 from scipy.sparse import issparse
-import os
 import logging
 
 
