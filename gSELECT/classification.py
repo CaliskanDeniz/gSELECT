@@ -2,9 +2,11 @@ import numpy as np
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from sklearn import preprocessing
+from itertools import combinations
 import concurrent.futures
 import random
 import os
+import gSELECT.utils as gsutils
 
 
 def run_gene_classification(expression_data, selected_gene_indices, gene_selection, number_sweeps=10):
@@ -51,8 +53,9 @@ def run_gene_classification(expression_data, selected_gene_indices, gene_selecti
         print(f"Running sweep {sweep + 1} of {number_sweeps}...")
         
         if gene_selection == 1:
+            np.random.seed()
             non_constant_metrics = np.where(np.ptp(data_train, axis=1) > 0)[0].tolist()
-            list_variables = np.sort(random.sample(non_constant_metrics, len(list_variables)))
+            list_variables = np.sort(np.random.choice(non_constant_metrics, size=len(list_variables), replace=False))
 
         X_train = data_train[list_variables, :].transpose()
         scaler = preprocessing.MinMaxScaler().fit(X_train)
@@ -265,7 +268,7 @@ def run_explorative_gene_selections(expression_data, gene_mutual_information, nu
       appropriate number based on the system's CPU count.
     """
 
-    gene_selection_combinations = generate_explorative_gene_selections(top_n_genes)
+    gene_selection_combinations = gsutils.generate_explorative_gene_selections(top_n_genes)
     top_genes = gene_mutual_information.nlargest(top_n_genes, "mutual information")["gene_name"].tolist()
 
     if num_threads is None:

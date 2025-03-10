@@ -136,11 +136,14 @@ def compute_mutual_information(gene_names, expression_data, gene_list=None,
             min_datapoints=min_datapoints,
             basis_log=basis_log
         )
-
-    if should_save_mutual_info:
-        mutual_info_csv_path = os.path.join(output_folder, "mutual_information.csv")
-        gene_mutual_information.to_csv(mutual_info_csv_path, index=False)
-        print(f"Full mutual information saved to {mutual_info_csv_path}")
+        # Sort by mutual information in descending order
+        gene_mutual_information = gene_mutual_information.sort_values(
+            by="mutual information", ascending=False
+        )
+        if should_save_mutual_info:
+            mutual_info_csv_path = os.path.join(output_folder, "mutual_information.csv")
+            gene_mutual_information.to_csv(mutual_info_csv_path, index=False)
+            print(f"Full mutual information saved to {mutual_info_csv_path}")
 
     if exclusion_list:
         gene_mutual_information = gene_mutual_information[~gene_mutual_information["gene_name"].isin(exclusion_list)]
