@@ -1,5 +1,59 @@
 import os
+import platform
+import psutil
+import logging
 from itertools import combinations
+
+
+def get_memory_usage_mb():
+    """
+    Get the current memory usage of the process in megabytes (MB).
+
+    This function uses the `psutil` library to inspect the resident set size (RSS) 
+    of the current Python process. RSS represents the portion of memory occupied 
+    in RAM (excluding swapped out pages).
+
+    Returns:
+    --------
+    float
+        The current memory usage in megabytes (MB).
+    """
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info().rss  # in bytes
+    return mem / (1024 ** 2)  # Convert to MB
+
+
+def log_peak_memory_usage():
+    """
+    Log the peak memory usage of the current process, adapted to OS.
+
+    This function retrieves the peak resident set size (RSS) of the process, 
+    representing the highest RAM usage during its lifetime.
+
+    Notes:
+    ------
+    - On Linux/macOS, uses `resource.getrusage()`, reported in kilobytes.
+    - On Windows, uses `psutil` to get `.peak_wset`, reported in bytes.
+
+    Logs:
+    -----
+    Peak memory usage in megabytes (MB).
+    """
+    system = platform.system()
+    
+    try:
+        if system == "Windows":
+            import psutil
+            process = psutil.Process(os.getpid())
+            peak_bytes = process.memory_info().peak_wset
+            peak_mb = peak_bytes / (1024 ** 2)
+        else:
+            import resource
+            peak_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            peak_mb = peak_kb / 1024  # Convert to MB
+        logging.info(f"Peak memory usage: {peak_mb:.2f} MB")
+    except Exception as e:
+        logging.warning(f"Could not determine peak memory usage: {e}")
 
 
 def get_unique_filename(filepath):

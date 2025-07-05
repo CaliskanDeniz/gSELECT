@@ -5,7 +5,7 @@ from scipy.sparse import issparse
 import principal_feature_analysis as pfa
 
 
-def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_information, min_datapoints=500, basis_log=2, number_output_functions=1):
+def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_information, min_datapoints=10, basis_log=2, number_output_functions=1):
     """
     Compute mutual information for gene selection.
     
@@ -23,7 +23,7 @@ def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_i
         List of specific genes to evaluate. If None, computes mutual information for all genes.
     top_mutual_information : int
         Number of top genes to retain based on mutual information scores.
-    min_datapoints : int, optional (default=500)
+    min_datapoints : int, optional (default=10)
         Minimum number of data points required for valid mutual information computation.
     basis_log : int, optional (default=2)
         Base logarithm for entropy calculation.
@@ -60,12 +60,17 @@ def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_i
     # non_constant_features = [i for i in range(expression_data.shape[0]) if expression_data.iloc[i].nunique() > 1]
     non_constant_features = np.where(np.ptp(expression_data, axis=1) > 0)[0].tolist()
     list_variables = [i for i in range(number_output_functions)] + non_constant_features
+
+    num_samples = expression_data.shape[1]
+    desired_number_of_bins = 10
+    min_n_data_points_a_bin = max(min_datapoints, num_samples // desired_number_of_bins)
+    min_n_data_points_a_bin = min(min_n_data_points_a_bin, num_samples // 2)
     
     mutual_info_results = pfa.get_mutual_information(
         expression_data,
         number_output_functions,
         list_variables,
-        min_datapoints,
+        min_n_data_points_a_bin,
         basis_log
     )
     mutual_info_df = mutual_info_results[0]
@@ -79,7 +84,7 @@ def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_i
 
 
 def compute_mutual_information(gene_names, expression_data, gene_list=None, 
-                               top_mutual_information=1, min_datapoints=500, 
+                               top_mutual_information=1, min_datapoints=10, 
                                basis_log=2, exclusion_list=[],
                                should_save_mutual_info=True, output_folder="output"):
     """
@@ -99,7 +104,7 @@ def compute_mutual_information(gene_names, expression_data, gene_list=None,
         List of specific genes to evaluate. If None, computes mutual information for all genes.
     top_mutual_information : int, optional (default=1)
         Number of top genes to retain based on mutual information scores.
-    min_datapoints : int, optional (default=500)
+    min_datapoints : int, optional (default=10)
         Minimum number of data points required for valid mutual information computation.
     basis_log : int, optional (default=2)
         Base logarithm for entropy calculation.

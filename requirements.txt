@@ -5,4 +5,5 @@ matplotlib
 scikit-learn
 polars
 scipy
+psutil
 principal_feature_analysis
