@@ -161,7 +161,7 @@ def load(path, n_threads=4, use_low_memory=True):
         has_header=False,
         n_threads=n_threads,
         low_memory=use_low_memory,
-        infer_schema_length=10,
+        infer_schema_length=100,
         use_pyarrow = True,
     )
     # Separate gene names and expression data
