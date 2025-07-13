@@ -56,16 +56,18 @@ def run_gene_classification(expression_data, selected_gene_indices, gene_selecti
         logging.info(f"Running sweep {sweep + 1} of {number_sweeps}...")
         gsutils.log_peak_memory_usage()
 
-        if  test_data is not None and sweep < number_sweeps - 1:
+        if test_data is not None and sweep >= number_sweeps - 1:
+            # if last sweep and we have testdata available:
+            data_train = expression_data.values
+            data_test = test_data.values
+        else:
+            # Monte Carlo CV
             data_total = expression_data.transpose()
             data_train = data_total.sample(frac=0.8)
             data_test = data_total.drop(data_train.index)
             data_train = data_train.transpose().values
             data_test = data_test.transpose().values
-        else:
-            data_train = expression_data.values
-            data_test = test_data.values
-        
+
         if gene_selection == 1:
             np.random.seed()
             non_constant_metrics = np.where(np.ptp(data_train, axis=1) > 0)[0].tolist()
