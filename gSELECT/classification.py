@@ -4,7 +4,7 @@ from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from sklearn import preprocessing
 from itertools import combinations
 import concurrent.futures
-import random
+import psutil
 import os
 import gSELECT.utils as gsutils
 import logging
@@ -381,7 +381,23 @@ def run_explorative_gene_selections(
 
     # pick sensible thread count
     if num_threads is None:
-        num_threads = max(2, os.cpu_count())
+        base_size_mb = expression_data.memory_usage().sum() / 1e6
+
+        vmem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+
+        # Total usable = available RAM + available Swap
+        total_usable_mb = (vmem.available + swap.free) / 1e6
+        total_usable_mb *= 0.8 # safety factor
+
+        if base_size_mb <= 0:
+            num_threads =1
+
+        num_threads = max(int(total_usable_mb // base_size_mb), 1)
+        num_threads = min(os.cpu_count(), num_threads)
+        logging.info(f"Selected number of Threads based on free memory and cpu count: {num_threads}")
+    
+
 
     results: dict[tuple[str, ...], list] = {}
 
