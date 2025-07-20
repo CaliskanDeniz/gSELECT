@@ -7,6 +7,56 @@ import os, textwrap, itertools
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,  # Show INFO and higher-level messages
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Optional: add timestamp and level
+)
+
+
+def save_dataframe_to_csv(df, output_folder, filename):
+    """
+    Save a DataFrame to a CSV file in the specified output folder.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to save.
+    output_folder : str
+        Directory for the CSV file.
+    filename : str
+        Name of the CSV file.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    csv_path = get_unique_filename(os.path.join(output_folder, filename))
+    df.to_csv(csv_path, index=False)
+    logging.info(f"CSV written → {csv_path}")
+    return csv_path
+
+
+def save_figure_png(fig, output_folder, filename, dpi=600, bbox_inches="tight"):
+    """
+    Save a Matplotlib figure as a PNG file.
+
+    Parameters
+    ----------
+    fig : matplotlib.figure.Figure
+        Figure to save.
+    output_folder : str
+        Directory for the PNG file.
+    filename : str
+        Name of the PNG file.
+    dpi : int, default 600
+        PNG resolution.
+    bbox_inches : str, default "tight"
+        Bounding box for saving.
+    """
+    os.makedirs(output_folder, exist_ok=True)
+    png_path = get_unique_filename(os.path.join(output_folder, filename))
+    fig.savefig(png_path, dpi=dpi, bbox_inches=bbox_inches)
+    logging.info(f"PNG written → {png_path}")
+    return png_path
 
 
 def plot_results(
@@ -18,49 +68,27 @@ def plot_results(
     save_png: bool = True,
 ):
     """
-    Summarise and visualise classification performance for several *gene-selection
-    strategies* (selected genes, random genes, all non-constant genes, …).
+    Summarise and visualise classification performance for multiple gene-selection strategies.
 
-    The function
-
-    1. aggregates **balanced‐accuracy** and **misclassification** metrics from
-       ``results``,
-    2. writes a tidy CSV table (`save_csv=True`),
-    3. produces two publication-ready figures:
-
-       * a **line plot** of *Test* vs *Train* balanced accuracy **per sweep**
-         (mean ± 1 SD shading) for each strategy,
-       * a **bar plot** of misclassified-sample counts (mean ± SD).
+    Produces:
+    • Line plot: Test vs Train balanced accuracy per sweep (mean ± SD).
+    • Bar plot: Misclassified sample counts (mean ± SD).
+    • Optional CSV of aggregated statistics.
 
     Parameters
     ----------
-    results : list[tuple]
-        Each entry must be a 4-tuple  
-        ``(r2_test, r2_train, gene_selection, n_misclassified)``  
-        where:
-
-        * ``r2_test``  – iterable of balanced-accuracy values (per sweep, per run)\
-        * ``r2_train`` – iterable of balanced-accuracy values (per sweep, per run)\
-        * ``gene_selection`` – {0, 1, 2, …} identifying the strategy\
-        * ``n_misclassified`` – iterable (per sweep, per run)
-
-        Replicates with the **same** ``gene_selection`` code are pooled.
-    output_folder : str, default ``"output"``
-        Destination directory for all artefacts.
-    dpi : int, default ``300``
-        Resolution of the saved PNGs.
-    save_csv : bool, default ``True``
-        If *True*, write the aggregated statistics to CSV.
-    csv_name : str, default ``"overall_statistics.csv"``
-        File name for the CSV (inside *output_folder*).
-    save_png : bool, default ``True``
-        If *True*, save the two figures as PNGs.
-
-    Files written
-    -------------
-    • *overall_statistics.csv* (optional)  
-    • *balanced_accuracy_test_train.png*  
-    • *misclassified_samples.png*
+    results : list of tuples
+        Each tuple: (r2_test, r2_train, gene_selection, n_misclassified).
+    output_folder : str, default "output"
+        Directory for output files.
+    dpi : int, default 300
+        PNG resolution.
+    save_csv : bool, default True
+        If True, save summary CSV.
+    csv_name : str, default "overall_statistics.csv"
+        CSV filename.
+    save_png : bool, default True
+        If True, save figures as PNG.
     """
     labels = {
         0: "Selected Genes",
@@ -96,19 +124,7 @@ def plot_results(
     df = pd.DataFrame(records)
 
     if save_csv:
-        summary = (
-            df.groupby("mode_label")
-              .agg(test_mean=("test_mean", "mean"),
-                   test_std =("test_mean", "std"),
-                   train_mean=("train_mean", "mean"),
-                   train_std =("train_mean", "std"),
-                   wrong_mean=("wrong_mean", "mean"),
-                   wrong_std =("wrong_mean", "std"))
-              .reset_index()
-        )
-        csv_path = get_unique_filename(os.path.join(output_folder, csv_name))
-        summary.to_csv(csv_path, index=False)
-        print(f"CSV written → {csv_path}")
+        save_dataframe_to_csv(df, output_folder, csv_name)
 
     fig_h = 4.5
     fig, ax = plt.subplots(figsize=(10, fig_h))
@@ -153,9 +169,7 @@ def plot_results(
     plt.tight_layout()
 
     if save_png:
-        acc_png = get_unique_filename(os.path.join(output_folder, "balanced_accuracy_test_train.png"))
-        plt.savefig(acc_png, dpi=dpi)
-        print(f"PNG written → {acc_png}")
+        save_figure_png(fig, output_folder, "balanced_accuracy_test_train.png", dpi=dpi)
     plt.show()
 
     bar_data = (
@@ -191,10 +205,7 @@ def plot_results(
     plt.tight_layout()
 
     if save_png:
-        mis_png = get_unique_filename(os.path.join(output_folder, "misclassified_samples.png"))
-        
-        plt.savefig(mis_png, dpi=dpi)
-        print(f"PNG written → {mis_png}")
+        save_figure_png(fig, output_folder, "misclassified_samples.png", dpi=dpi)
     plt.show()
 
 
@@ -208,40 +219,27 @@ def plot_multiple_gene_selections(
     save_png: bool = True,
 ):
     """
-    Compare model performance as a function of *panel size* (number of selected
-    genes) and export both a line chart (accuracy) and a bar chart
-    (misclassification counts).
+    Compare model performance as a function of panel size (number of selected genes).
+
+    Produces:
+    • Line plot: Balanced accuracy vs number of selected genes (mean ± SD).
+    • Bar plot: Misclassified sample counts (mean ± SD).
+    • Optional CSV of aggregated statistics.
 
     Parameters
     ----------
     results : dict
-        Mapping ``{ panel_size : list_of_run_outputs }`` where
-        ``run_outputs[0]`` is a 4-tuple like
-        ``(r2_test, r2_train, _, n_misclassified)``.
+        Mapping {panel_size: list_of_run_outputs}, where each run output is a 4-tuple.
     output_folder : str, default "output"
-        Destination for the generated files.
+        Directory for output files.
     dpi : int, default 600
-        Resolution of the PNGs.
+        PNG resolution.
     save_csv : bool, default True
-        If ``True``, write a CSV containing the aggregated statistics.
+        If True, save summary CSV.
     csv_name : str, default "selection_size_summary.csv"
-        Filename for the CSV.
+        CSV filename.
     save_png : bool, default True
-        If ``True``, save the PNGs in *output_folder*.
-
-    Files written
-    -------------
-    • *accuracy_vs_selected_genes.png*  
-    • *misclassified_vs_selected_genes.png*  
-    • *selection_size_summary.csv* (optional)
-
-    Notes
-    -----
-    • The line plot auto-scales its y-axis (small margin top & bottom).  
-    • Bars in the misclassification plot are coloured by a sequential colormap
-      for visual ranking.  
-    • Both figures have a 16 : 9 aspect ratio that adapts in height to the
-      number of points so labels never crowd.
+        If True, save figures as PNG.
     """
     sizes = sorted(results.keys())
     summary_rows = []
@@ -262,12 +260,8 @@ def plot_multiple_gene_selections(
         )
 
     df = pd.DataFrame(summary_rows)
-
     if save_csv:
-        os.makedirs(output_folder, exist_ok=True)
-        csv_path = get_unique_filename(os.path.join(output_folder, csv_name))
-        df.to_csv(csv_path, index=False)
-        print(f"CSV written → {csv_path}")
+        save_dataframe_to_csv(df, output_folder, csv_name)
 
     def fig_ratio(n_points, base_h=4.0):
         """Return a height that grows a little with n_points."""
@@ -313,11 +307,7 @@ def plot_multiple_gene_selections(
     plt.tight_layout()
 
     if save_png:
-        os.makedirs(output_folder, exist_ok=True)
-        acc_png = get_unique_filename(os.path.join(output_folder, "accuracy_vs_selected_genes.png"))
-        plt.savefig(acc_png, dpi=dpi)
-        print(f"PNG written → {acc_png}")
-
+        save_figure_png(fig, output_folder, "accuracy_vs_selected_genes.png", dpi=dpi)
     plt.show()
 
     fig_h = fig_ratio(len(sizes))
@@ -346,10 +336,7 @@ def plot_multiple_gene_selections(
     plt.tight_layout()
 
     if save_png:
-        mis_png = get_unique_filename(os.path.join(output_folder, "misclassified_vs_selected_genes.png"))
-        plt.savefig(mis_png, dpi=dpi)
-        print(f"PNG written → {mis_png}")
-
+        save_figure_png(fig, output_folder, "misclassified_vs_selected_genes.png", dpi=dpi)
     plt.show()
 
 
@@ -364,29 +351,14 @@ def plot_explorative_gene_selections(
     csv_name="explorative_gene_subset_rankings.csv",
     save_csv=True,
     save_png=True,
-    legend_fontsize=9,
     synonym_prefix="S"
 ):
     """
-    Visualise the best-performing gene-subset models and (optionally) export
-    their statistics.
+    Visualise top-performing gene subsets and export their statistics.
 
-    The function
-    1. computes *mean* ± *std* of balanced-test accuracy for every subset in
-       ``results``,
-    2. selects the top-scoring ``top_n`` unique subsets,
-    3. renders them as a horizontal bar chart with automatic figure sizing,
-       left-margin calculation and per-row spacing that adapts to
-       *arbitrarily* long gene IDs and *any* number of subsets,
-    4. optionally writes a tidy CSV and/or a high-resolution PNG.
-
-    Results dictionary format
-    -------------------------
-    ``results = { (gene_id₁, gene_id₂, …): list_of_runs, … }``
-
-    Each *run* is an iterable whose first element (``run[0][0]``) is an array-
-    like vector of ``r2_test`` values used to derive the mean and standard
-    deviation.
+    Produces:
+    • Horizontal bar chart of top subsets (mean ± SD).
+    • Optional CSV ranking all subsets.
 
     Parameters
     ----------
@@ -395,42 +367,23 @@ def plot_explorative_gene_selections(
     top_n : int, default 10
         Number of highest-ranked subsets to display.
     output_folder : str, default "output"
-        Destination directory for the PNG and/or CSV files.
-    wrap_width : int, default 14
-        Soft-wrap width (in characters) for breaking long gene IDs in the
-        y-axis label.
+        Directory for output files.
     cmap_name : str, default "Blues"
-        Name of a sequential Matplotlib colormap used for the bars.
+        Colormap for bars.
     show_delta : bool, default False
-        If ``True``, plot Δ-accuracy relative to the worst of the displayed
-        subsets (useful when absolute accuracies cluster tightly).
+        If True, plot Δ-accuracy relative to the worst subset.
     annotate : bool, default True
-        Show “mean ± std” text to the right of each bar.
+        Show “mean ± std” text beside each bar.
     dpi : int, default 600
-        Resolution of the saved PNG.
+        PNG resolution.
     csv_name : str, default "explorative_gene_subset_rankings.csv"
-        Filename for the CSV that ranks *all* subsets (written only when
-        ``save_csv`` is ``True``).
+        CSV filename.
     save_csv : bool, default True
-        Write the ranked-subset DataFrame to CSV.
+        If True, save ranking CSV.
     save_png : bool, default True
-        Save the plot as PNG.
-
-    Returns
-    -------
-    None
-        The figure is displayed inline and, depending on the ``save_*`` flags,
-        files are written to *output_folder*.
-
-    Notes
-    -----
-    • Subsets with identical (mean, std) pairs are de-duplicated before
-      ranking, ensuring each bar is unique.  
-    • Figure height scales with the total number of wrapped text lines;
-      left margin is computed from the rendered pixel width of the longest
-      label, so even 50 × 4-line labels remain readable.  
-    • Bar height consumes 90 % of the vertical slot allocated to each row,
-      producing equal visual rhythm regardless of label length.
+        If True, save figure as PNG.
+    synonym_prefix : str, default "S"
+        Prefix for subset codes in the legend.
     """
     rows = []
     for genes, run in results.items():
@@ -449,10 +402,7 @@ def plot_explorative_gene_selections(
     df_top = df.head(top_n)
 
     if save_csv:
-        os.makedirs(output_folder, exist_ok=True)
-        df.assign(gene_subset=df.genes.apply(lambda g: ";".join(g))) \
-          .drop(columns="genes") \
-          .to_csv(get_unique_filename(os.path.join(output_folder, csv_name)), index=False)
+        save_dataframe_to_csv(df, output_folder, csv_name)
 
     codes = [f"{synonym_prefix}{i+1}" for i in range(len(df_top))]
     code_map = dict(zip(codes, df_top["genes"]))
@@ -525,56 +475,51 @@ def plot_explorative_gene_selections(
         f"{code}: {', '.join(genes)}" for code, genes in code_map.items()
     ])
     plt.figtext(0.01, -0.02, "Gene Subset Legend:\n" + legend_text,
-                ha="left", va="top", fontsize=legend_fontsize, fontfamily="monospace",
+                ha="left", va="top", fontsize=9, fontfamily="monospace",
                 wrap=True, linespacing=1.3)
 
     plt.tight_layout(rect=(0, 0.18, 1, 1))
 
     if save_png:
-        os.makedirs(output_folder, exist_ok=True)
-        filepath = get_unique_filename(os.path.join(output_folder, f"top_{len(df_top)}_gene_subsets.png"))
-        fig.savefig(filepath, dpi=dpi, bbox_inches="tight")
-        print(f"PNG written → {filepath}")
-
+        save_figure_png(fig, output_folder, "explorative_gene_subset_rankings.png", dpi=dpi)
     plt.show()
 
 
 def plot_all_genes(
-   results,
+    results,
     output_folder="output",
     dpi=600,
     csv_name="all_genes_rankings.csv",
     save_csv=True,
-    save_png=True,
-    palette_name="deep"
+    save_png=True
 ):
     """
-    Plot SCFV results with high-impact visuals: test/train balanced accuracy
-    across sweeps and mean misclassified samples.
+    Visualise performance metrics for all gene-selection strategies.
+
+    Produces:
+    • Line plot: Test vs Train balanced accuracy across sweeps.
+    • Bar plot: Misclassified sample counts (mean ± SD).
+    • Optional CSV of summary statistics.
 
     Parameters
     ----------
     results : list of tuples
-        Each tuple is (r2_test, r2_train, mode, nw), where:
-        - r2_test : array-like of shape (1, n_sweeps)
-        - r2_train : array-like of shape (1, n_sweeps)
-        - mode : int (0, 1, 2) indicating the gene selection strategy
-        - nw : array-like of misclassified sample counts across runs
-    output_folder : str
-        Directory to save the figures.
-    dpi : int
-        Resolution of the saved PNGs.
-    save_csv : bool
-        If True, save the data as CSV.
-    save_png : bool
-        If True, save the figures as PNG.
-    palette_name : str
-        Seaborn palette name.
+        Each tuple: (r2_test, r2_train, mode, n_misclassified).
+    output_folder : str, default "output"
+        Directory for output files.
+    dpi : int, default 600
+        PNG resolution.
+    csv_name : str, default "all_genes_rankings.csv"
+        CSV filename.
+    save_csv : bool, default True
+        If True, save summary CSV.
+    save_png : bool, default True
+        If True, save figures as PNG.
     """
     os.makedirs(output_folder, exist_ok=True)
 
     sns.set_theme(context="paper", style="whitegrid")
-    palette = sns.color_palette(palette_name)
+    palette = sns.color_palette("deep")
 
     labels_map = {
         0: "Top-MI genes",
@@ -598,27 +543,28 @@ def plot_all_genes(
         )
 
     rows = []
-    for genes, run in results.items():
-        r2_test = run[0][0] if isinstance(run[0], (tuple, list, np.ndarray)) else run[0]
+    for r2_test, _, mode, _ in results:
         scores = np.array(r2_test)
         if scores.ndim > 1:
             scores = scores.ravel()
         rows.append({
-            "genes": tuple(genes),
+            "mode": mode,
             "mean": float(np.mean(scores)),
             "std": float(np.std(scores))
         })
     df = pd.DataFrame(rows).sort_values(["mean", "std"], ascending=[False, True])
-    df = df[~df.duplicated(subset=["mean", "std"])].reset_index(drop=True)
+    df = df.drop_duplicates(subset=["mean", "std"]).reset_index(drop=True)
     if save_csv:
-        os.makedirs(output_folder, exist_ok=True)
-        csv_path = get_unique_filename(os.path.join(output_folder, csv_name))
-        df.to_csv(csv_path, index=False)
-        print(f"CSV written → {csv_path}")
+        save_dataframe_to_csv(df, output_folder, csv_name)
 
     ax1.set_xlabel("Sweep", labelpad=8, fontweight='bold')
     ax1.set_ylabel("Balanced Accuracy", fontweight='bold')
-    ax1.set_ylim(0.40, 1.01)
+    
+    #set dynamic y-limits
+    y_min = min(df["mean"].min() - df["std"].max(), 0.0)
+    y_max = max(df["mean"].max() + df["std"].max(), 1.1)
+    ax1.set_ylim(y_min, y_max)
+
     ax1.set_title("Balanced Accuracy Over Sweeps", fontweight='bold', fontsize=14)
     ax1.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:.2f}"))
 
@@ -632,8 +578,8 @@ def plot_all_genes(
     fig1.tight_layout()
 
     if save_png:
-        fig1.savefig(get_unique_filename(os.path.join(output_folder, "balanced_accuracy_sweeps_all_genes.png")),
-                     dpi=dpi, bbox_inches="tight")
+        save_figure_png(fig1, output_folder, "accuracy_vs_sweeps.png", dpi=dpi)
+    plt.show()
 
     means = [nw.mean() for *_, nw in results]
     stds = [nw.std() for *_, nw in results]
@@ -643,7 +589,7 @@ def plot_all_genes(
     fig2, ax2 = plt.subplots(figsize=(7, 4.5))
     bars = ax2.bar(
         x, means, yerr=stds, capsize=5, width=0.6,
-        color=sns.color_palette(palette_name, n_colors=len(means))
+        color=sns.color_palette("deep", n_colors=len(means))
     )
 
     ax2.set_xticks(x)
@@ -656,6 +602,5 @@ def plot_all_genes(
     fig2.tight_layout()
 
     if save_png:
-        fig2.savefig(os.path.join(output_folder, "misclassified_samples_all_genes.png"),
-                     dpi=dpi, bbox_inches="tight")
+        save_figure_png(fig2, output_folder, "misclassified_samples.png", dpi=dpi)
     plt.show()

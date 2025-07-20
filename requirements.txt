@@ -1,9 +1,14 @@
 scanpy
+anndata
 pandas
 numpy
 matplotlib
+seaborn
 scikit-learn
 polars
 scipy
 psutil
 principal_feature_analysis
+tqdm
+openpyxl
+pyarrow

@@ -15,36 +15,40 @@ logging.basicConfig(
 )
 
 
-def run_gene_classification(expression_data, selected_gene_indices, gene_selection, test_data=None, number_sweeps=10, max_iterations=500):
+def run_gene_classification(
+    expression_data,
+    selected_gene_indices,
+    gene_selection,
+    test_data=None,
+    number_sweeps=10,
+    max_iterations=500
+):
     """
-    Run gene classification using an MLP classifier.
-    
-    This function trains a neural network classifier on selected genes and evaluates
-    its performance across multiple sweeps. It calculates balanced accuracy and 
-    tracks misclassified samples.
-    
-    Parameters:
-    -----------
+    Train and evaluate an MLP classifier on selected genes.
+
+    Produces:
+    • Test and train balanced accuracy across sweeps.
+    • Misclassified sample counts per sweep.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     selected_gene_indices : list of int
-        Indices of genes to be used for classification.
+        Indices of genes to use for classification.
     gene_selection : int
-        Mode of gene selection (0: selected genes, 1: random genes, 2: all non-constant genes).
-    number_sweeps : int, optional (default=10)
-        Number of iterations to run the classification.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
-    
-    Returns:
-    --------
-    tuple (np.ndarray, np.ndarray, int, np.ndarray)
-        - Test accuracy across sweeps.
-        - Train accuracy across sweeps.
-        - Gene selection mode.
-        - Number of misclassified samples per sweep.
+        Mode of gene selection (0: selected, 1: random, 2: all non-constant).
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
+        Number of classification sweeps.
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+
+    Returns
+    -------
+    tuple
+        (test_accuracy, train_accuracy, gene_selection, misclassified_counts)
     """
     list_variables = np.sort(selected_gene_indices)
 
@@ -101,32 +105,38 @@ def run_gene_classification(expression_data, selected_gene_indices, gene_selecti
     return r2_test, r2_train, gene_selection, number_wrongly_classified
 
 
-def run_all_genes(expression_data, gene_mutual_information, test_data=None, number_sweeps=10, max_iterations=500):
+def run_all_genes(
+    expression_data,
+    gene_mutual_information,
+    test_data=None,
+    number_sweeps=10,
+    max_iterations=500
+):
     """
     Run classification using all non-constant genes.
-    
-    This function selects all genes with non-zero variance and evaluates classification 
-    performance using the MLP classifier.
-    
-    Parameters:
-    -----------
+
+    Produces:
+    • Test and train balanced accuracy across sweeps.
+    • Misclassified sample counts per sweep.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=10)
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
         Number of classification sweeps.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
-    
-    Returns:
-    --------
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+
+    Returns
+    -------
     list of tuple
         Contains classification accuracy and misclassification metrics.
     """
-
     logging.info("Selecting all non-constant genes for classification...")
 
     selected_genes = gene_mutual_information.sort_values(by="mutual information", ascending=False)
@@ -139,34 +149,43 @@ def run_all_genes(expression_data, gene_mutual_information, test_data=None, numb
     return [(r2_test, r2_train, gene_selection, number_wrongly_classified)]
 
 
-def run_selected_genes(expression_data, gene_mutual_information, test_data=None, number_sweeps=10, top_n_genes=1, include_random=True, max_iterations=500):
+def run_selected_genes(
+    expression_data,
+    gene_mutual_information,
+    test_data=None,
+    number_sweeps=10,
+    top_n_genes=1,
+    include_random=True,
+    max_iterations=500
+):
     """
     Run classification using a subset of top-ranked genes.
-    
-    This function selects the top `n` genes based on mutual information scores and
-    evaluates classification performance.
-    
-    Parameters:
-    -----------
+
+    Produces:
+    • Test and train balanced accuracy across sweeps.
+    • Misclassified sample counts per sweep.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=10)
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
         Number of classification sweeps.
-    top_n_genes : int, optional (default=1)
+    top_n_genes : int, default 1
         Number of top-ranked genes to use for classification.
-    include_random : bool, optional (default=True)
-        Whether to also include a random selection of genes for comparison.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
-    
-    Returns:
-    --------
+    include_random : bool, default True
+        If True, also include random gene selection for comparison.
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+
+    Returns
+    -------
     list of tuple
-        Contains classification accuracy and misclassification metrics for different gene selections.
+        Contains classification accuracy and misclassification metrics for each selection mode.
     """
 
     results = []
@@ -186,33 +205,42 @@ def run_selected_genes(expression_data, gene_mutual_information, test_data=None,
     return results
 
 
-def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_information, test_data=None, number_sweeps=10, include_random=True, max_iterations=500):
+def run_with_custom_gene_set(
+    expression_data,
+    selected_gene_names,
+    gene_mutual_information,
+    test_data=None, number_sweeps=10,
+    include_random=True,
+    max_iterations=500
+):
     """
-    Run classification using a custom gene set.
-    
-    This function allows the user to specify a custom set of genes for classification.
-    
-    Parameters:
-    -----------
+    Run classification using a custom set of genes.
+
+    Produces:
+    • Test and train balanced accuracy across sweeps.
+    • Misclassified sample counts per sweep.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     selected_gene_names : list of str
         List of gene names to use for classification.
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=10)
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
         Number of classification sweeps.
-    include_random : bool, optional (default=True)
-        Whether to also include a random selection of genes for comparison.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
-    
-    Returns:
-    --------
+    include_random : bool, default True
+        If True, also include random gene selection for comparison.
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+
+    Returns
+    -------
     list of tuple
-        Contains classification accuracy and misclassification metrics for different gene selections.
+        Contains classification accuracy and misclassification metrics for each selection mode.
     """
 
     results = []
@@ -231,37 +259,51 @@ def run_with_custom_gene_set(expression_data, selected_gene_names, gene_mutual_i
     return results
 
 
-def run_multiple_gene_selections(expression_data, gene_mutual_information, test_data=None, number_sweeps=10, gene_selection=[1, 2, 3], max_iterations=500):
+def run_multiple_gene_selections(
+    expression_data,
+    gene_mutual_information,
+    test_data=None,
+    number_sweeps=10,
+    gene_selection=[1, 2, 3],
+    max_iterations=500
+):
     """
-    Run multiple classification experiments with different gene selection sizes.
-    
-    This function iterates over multiple gene selection sizes and evaluates 
-    classification performance for each.
-    
-    Parameters:
-    -----------
+    Run classification experiments for multiple gene selection sizes.
+
+    Produces:
+    • Test and train balanced accuracy across sweeps for each panel size.
+    • Misclassified sample counts per sweep.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=10)
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
         Number of classification sweeps.
-    gene_selection : list of int, optional (default=[1, 2, 3])
-        List of different gene selection sizes to test.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
-    
-    Returns:
-    --------
+    gene_selection : list of int, default [1, 2, 3]
+        List of panel sizes to test.
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+
+    Returns
+    -------
     dict
-        Mapping of gene selection sizes to classification results.
+        Mapping of panel size to classification results.
     """
 
     results = {}
     for top_n in gene_selection:
-        results[top_n] = run_selected_genes(expression_data, gene_mutual_information, test_data, number_sweeps, top_n, False, max_iterations=max_iterations)
+        results[top_n] = run_selected_genes(
+            expression_data,
+            gene_mutual_information,
+            test_data, number_sweeps,
+            top_n, False,
+            max_iterations=max_iterations
+        )
     return results
 
 
@@ -277,76 +319,38 @@ def run_explorative_gene_selections(
     greedy_threshold: int = 10
 ):
     """
-    Exhaustive search of all subsets drawn from the `top_n_genes` **or**—when
-    that search would explode combinatorially—an automatic fall-back to greedy
-    forward selection.
+    Explore all subsets of the top-ranked genes or use greedy selection if too large.
 
-    The routine is a convenience wrapper around two lower-level engines:
-
-    * **Exhaustive engine** – evaluates *every* non-empty subset
-      (``2^n − 1`` possibilities) of the `top_n_genes` with
-      `run_with_custom_gene_set`, using a thread pool for parallelism.
-    * **Greedy engine** – delegates to :pyfunc:`run_greedy_selection`
-      (one-gene-at-a-time forward selection) when
-      ``top_n_genes > greedy_threshold`` *and* ``use_greedy_if_large`` is
-      ``True``.
-
-    Returns a dictionary ``{ subset_tuple : result_list }`` identical in shape
-    to the outputs of the underlying helpers, so downstream code remains
-    unchanged.
+    Produces:
+    • Classification results for all non-empty subsets or greedy panels.
+    • Parallel execution for efficiency.
 
     Parameters
     ----------
-    expression_data : numpy.ndarray
-        Gene-expression matrix of shape *(cells × genes)*.
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
-    gene_mutual_information : pandas.DataFrame
-        DataFrame with at least two columns:
-
-        ``gene_name`` – gene identifier  
-        ``mutual information`` – MI score used to rank genes
+    expression_data : np.ndarray
+        Gene expression data (cells × genes).
+    gene_mutual_information : pd.DataFrame
+        DataFrame containing mutual information scores for genes.
+    test_data : np.ndarray, optional
+        Separate test data (if available).
     number_sweeps : int, default 10
-        How many train/validation “sweeps” to perform per subset.
+        Number of classification sweeps per subset.
     top_n_genes : int, default 5
-        Rank-cutoff for the exhaustive (or greedy) search.  Genes are chosen by
-        descending mutual-information score.
+        Number of top-ranked genes to explore.
     num_threads : int or None, default None
-        Size of the :pyclass:`~concurrent.futures.ThreadPoolExecutor`.  If
-        *None*, the runner uses ``max(2, os.cpu_count())``.
+        Number of parallel threads (auto if None).
     max_iterations : int, default 500
-        Upper bound on the MLP iterations passed through to
-        :pyfunc:`run_with_custom_gene_set`.
-    use_greedy_if_large : bool, keyword-only, default True
-        Toggle for the automatic fall-back.  Set to *False* to force the
-        (potentially huge) exhaustive enumeration.
-    greedy_threshold : int, keyword-only, default 10
-        If ``top_n_genes > greedy_threshold`` *and*
-        ``use_greedy_if_large is True``, the function runs
-        :pyfunc:`run_greedy_selection` instead of the exhaustive engine.
+        Maximum MLP iterations.
+    use_greedy_if_large : bool, default True
+        Use greedy selection if subset count is too large.
+    greedy_threshold : int, default 10
+        Switch to greedy if top_n_genes exceeds this value.
 
     Returns
     -------
-    dict[tuple[str, ...], list]
-        Mapping from *gene-subset tuples* to the list returned by
-        :pyfunc:`run_with_custom_gene_set` or
-        :pyfunc:`run_greedy_selection`.
-
-    Notes
-    -----
-    * Exhaustive mode launches one thread per subset, so the total number of
-      tasks is ``2^n − 1``.  A warning with the exact count is logged before
-      execution.
-    * In greedy mode the maximum panel size equals ``greedy_threshold`` (the
-      same cut-off that triggered the fall-back), providing a consistent cap on
-      runtime.
-    * Any exception raised while evaluating an individual subset is caught,
-      logged, and that subset is skipped; remaining jobs continue unaffected.
+    dict
+        Mapping of gene-subset tuples to classification results.
     """
-
-    # ------------------------------------------------------------------ #
-    # 0.  Automatic fall-back to greedy if the search would explode       #
-    # ------------------------------------------------------------------ #
     if use_greedy_if_large and top_n_genes > greedy_threshold:
         logging.info(
             f"top_n_genes={top_n_genes} exceeds greedy_threshold="
@@ -358,13 +362,9 @@ def run_explorative_gene_selections(
             gene_mutual_information=gene_mutual_information,
             number_sweeps=number_sweeps,
             top_n_genes=top_n_genes,
-            max_panel_size=greedy_threshold,   # ← use threshold as panel cap
+            max_panel_size=greedy_threshold,
             max_iterations=max_iterations,
         )
-
-    # ------------------------------------------------------------------ #
-    # 1.  Proceed with exhaustive enumeration as before                  #
-    # ------------------------------------------------------------------ #
     gene_selection_combinations = gsutils.generate_explorative_gene_selections(
         top_n_genes
     )
@@ -378,8 +378,6 @@ def run_explorative_gene_selections(
         ["gene_name"]
         .tolist()
     )
-
-    # pick sensible thread count
     if num_threads is None:
         base_size_mb = expression_data.memory_usage().sum() / 1e6
 
@@ -397,8 +395,6 @@ def run_explorative_gene_selections(
         num_threads = min(os.cpu_count(), num_threads)
         logging.info(f"Selected number of Threads based on free memory and cpu count: {num_threads}")
     
-
-
     results: dict[tuple[str, ...], list] = {}
 
     def run_experiment(gene_subset):
@@ -425,7 +421,6 @@ def run_explorative_gene_selections(
     return results
 
 
-
 def run_greedy_selection(
     expression_data,
     gene_mutual_information,
@@ -434,38 +429,51 @@ def run_greedy_selection(
     top_n_genes: int = 50,
     max_panel_size: int | None = None,
     max_iterations: int = 500,
-    allow_swaps: bool = False,       # ← upgrade #2
-    beam_width: int | None = None,   # ← upgrade #3
+    allow_swaps: bool = False,
+    beam_width: int | None = None
 ):
     """
-    Forward greedy feature selection **with backtracking to the best panel seen**.
+    Helper for greedy forward feature selection with optional swaps and beam search.
 
-    Stops when:
-    * every candidate gene has failed to improve the *current* panel **and**
-    * we have looped once over the entire remaining pool **after** the last
-      positive gain.
+    Produces:
+    • Classification results for panels built by greedy selection.
+    • Optional swaps and beam search for improved panel selection.
 
-    Optional extras
-    ---------------
-    allow_swaps : bool
-        If *True* perform a “with-replacement” pass after each successful add:
-        swap one selected gene with one unselected if the swap increases
-        accuracy.
-    beam_width : int or None
-        If given, keep the `beam_width` best partial panels at every depth
-        (classic beam search).  ``None`` reproduces single-path greedy.
+    Parameters
+    ----------
+    expression_data : np.ndarray
+        Gene expression data (cells × genes).
+    gene_mutual_information : pd.DataFrame
+        DataFrame containing mutual information scores for genes.
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
+        Number of classification sweeps.
+    top_n_genes : int, default 50
+        Number of top-ranked genes to consider.
+    max_panel_size : int or None, default None
+        Maximum panel size.
+    max_iterations : int, default 500
+        Maximum MLP iterations.
+    allow_swaps : bool, default False
+        If True, allow swaps after each add.
+    beam_width : int or None, default None
+        Beam width for beam search.
+
+    Returns
+    -------
+    dict
+        Mapping of gene panels to classification results.
     """
-
-    # ---------- prep ---------------------------------------------------
     top_genes = (
         gene_mutual_information.nlargest(top_n_genes, "mutual information")
         ["gene_name"]
         .tolist()
     )
 
-    Panel = tuple[str, ...]           # readable alias
+    Panel = tuple[str, ...]
     results: dict[Panel, list] = {}
-    beam    = [()]                    # list of current partial panels
+    beam    = [()]
     best_panel: Panel | None = None
     best_score: float = -float("inf")
 
@@ -483,7 +491,6 @@ def run_greedy_selection(
             results[panel] = res
         return float(np.mean([r[0] for r in results[panel]]))
 
-    # ---------- main loop ----------------------------------------------
     iter_no_gain = 0
     while beam and (max_panel_size is None or len(beam[0]) < max_panel_size):
         candidates: list[tuple[Panel, float]] = []
@@ -497,25 +504,21 @@ def run_greedy_selection(
         if not candidates:
             break
 
-        # choose best K (=beam_width) panels
         candidates.sort(key=lambda t: t[1], reverse=True)
         top_k = candidates[: (beam_width or 1)]
 
         best_new_panel, best_new_score = top_k[0]
 
-        # update global best if needed
         if best_new_score > best_score:
             best_panel, best_score = best_new_panel, best_new_score
             iter_no_gain = 0
         else:
             iter_no_gain += 1
 
-        # early-stop when we looped once w/o any gain
         if iter_no_gain >= len(top_genes):
             logging.info("Early stopping (searched full pool since last gain).")
             break
 
-        # optional “swap” pass ------------------------------------------
         if allow_swaps:
             improved = False
             panel_set = set(best_new_panel)
@@ -529,11 +532,8 @@ def run_greedy_selection(
                         break
                 if improved:
                     break
-
-        # advance beam
         beam = [p for p, _ in top_k]
 
-    # ensure best panel & its result are retained
     if best_panel is not None:
         best_panel = tuple(best_panel)
         results.setdefault(best_panel, results[best_panel])
@@ -543,45 +543,43 @@ def run_greedy_selection(
 
 
 
-def run_explorative_gene_selections_with_custom_set(expression_data, selected_gene_names, gene_mutual_information, test_data=None, number_sweeps=10, num_threads=None, max_iterations=500):
+def run_explorative_gene_selections_with_custom_set(
+    expression_data,
+    selected_gene_names,
+    gene_mutual_information,
+    test_data=None,
+    number_sweeps=10,
+    num_threads=None,
+    max_iterations=500
+):
     """
-    Perform an exploratory analysis of gene selection using a custom set of genes.
-    
-    This function evaluates all possible subsets of a user-defined gene list by 
-    iterating through different combinations of the selected genes and measuring 
-    their classification performance. The computation is parallelized using 
-    multi-threading to improve efficiency.
+    Explore all subsets of a custom gene set for classification.
 
-    Parameters:
-    -----------
+    Produces:
+    • Classification results for all non-empty subsets.
+    • Parallel execution for efficiency.
+
+    Parameters
+    ----------
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    test_data: np.ndarray
-        Gene expression data that is only used for testing
+        Gene expression data (cells × genes).
     selected_gene_names : list of str
-        A list of gene names selected by the user for exploration.
+        List of gene names to explore.
     gene_mutual_information : pd.DataFrame
         DataFrame containing mutual information scores for genes.
-    number_sweeps : int, optional (default=10)
-        Number of classification sweeps to run for each gene subset.
-    num_threads : int, optional (default=None)
-        Number of parallel threads to use. If None, defaults to the number of available CPU cores.
-    max_iterations: int, optional (default=500)
-        Number of iterations of the MLP algorithm
+    test_data : np.ndarray, optional
+        Separate test data (if available).
+    number_sweeps : int, default 10
+        Number of classification sweeps per subset.
+    num_threads : int, default None
+        Number of parallel threads (auto if None).
+    max_iterations : int, default 500
+        Maximum MLP iterations.
 
-    Returns:
-    --------
+    Returns
+    -------
     dict
-        Mapping of gene subsets (as tuples) to classification results.
-
-    Notes:
-    ------
-    - The function generates all possible subsets of the provided gene set, ranging from 
-      single-gene selections to the full set.
-    - Each subset is evaluated independently using `run_with_custom_gene_set`.
-    - The computation is parallelized using `ThreadPoolExecutor` to optimize performance.
-    - If `num_threads` is not specified, the function will automatically determine an 
-      appropriate number based on the system's CPU count.
+        Mapping of gene-subset tuples to classification results.
     """
 
     gene_selection_combinations = []
@@ -595,8 +593,13 @@ def run_explorative_gene_selections_with_custom_set(expression_data, selected_ge
     def run_experiment(gene_subset):
         logging.info(f"Running experiment with gene subset: {gene_subset}")
         results[tuple(gene_subset)] = run_with_custom_gene_set(
-            expression_data, list(gene_subset), gene_mutual_information, test_data, number_sweeps, include_random=False, max_iterations=max_iterations
-        )
+            expression_data,
+            list(gene_subset),
+            gene_mutual_information,
+            test_data, number_sweeps,
+            include_random=False,
+            max_iterations=max_iterations
+    )
 
     if num_threads is None:
         num_threads = max(2, os.cpu_count())

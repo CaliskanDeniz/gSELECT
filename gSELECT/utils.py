@@ -9,14 +9,17 @@ def get_memory_usage_mb():
     """
     Get the current memory usage of the process in megabytes (MB).
 
-    This function uses the `psutil` library to inspect the resident set size (RSS) 
-    of the current Python process. RSS represents the portion of memory occupied 
-    in RAM (excluding swapped out pages).
+    Produces:
+    • Current memory usage in MB.
 
-    Returns:
-    --------
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
     float
-        The current memory usage in megabytes (MB).
+        Current memory usage in MB.
     """
     process = psutil.Process(os.getpid())
     mem = process.memory_info().rss  # in bytes
@@ -25,19 +28,14 @@ def get_memory_usage_mb():
 
 def log_peak_memory_usage():
     """
-    Log the peak memory usage of the current process, adapted to OS.
+    Log the peak memory usage of the current process.
 
-    This function retrieves the peak resident set size (RSS) of the process, 
-    representing the highest RAM usage during its lifetime.
+    Produces:
+    • Logs peak RAM usage in megabytes (MB), adapted to OS.
 
-    Notes:
-    ------
-    - On Linux/macOS, uses `resource.getrusage()`, reported in kilobytes.
-    - On Windows, uses `psutil` to get `.peak_wset`, reported in bytes.
-
-    Logs:
-    -----
-    Peak memory usage in megabytes (MB).
+    Parameters
+    ----------
+    None
     """
     system = platform.system()
     
@@ -58,28 +56,23 @@ def log_peak_memory_usage():
 
 def get_unique_filename(filepath):
     """
-    Generate a unique filename if a file with the given name already exists.
-    
-    This function appends a numerical counter to the filename to prevent overwriting
-    existing files. It ensures that each new file gets a unique name.
-    
-    Example:
-    --------
-    If "output.csv" exists, the function will return "output_1.csv",
-    then "output_2.csv", etc.
-    
-    Parameters:
-    -----------
+    Generate a unique filename if the given file already exists.
+
+    Produces:
+    • Modified file path with a numerical suffix to avoid overwriting.
+
+    Parameters
+    ----------
     filepath : str
-        The original file path.
-    
-    Returns:
-    --------
+        Original file path.
+
+    Returns
+    -------
     str
-        A modified file path that is unique.
+        Unique file path.
     """
     if not os.path.exists(filepath):
-        return filepath  # If file does not exist, use the original name
+        return filepath 
 
     base, ext = os.path.splitext(filepath)
     counter = 1
@@ -94,25 +87,20 @@ def get_unique_filename(filepath):
 
 def generate_explorative_gene_selections(n):
     """
-    Generate all possible subsets of gene selections.
-    
-    This function creates all possible subsets of genes using itertools.combinations.
-    It helps in evaluating different combinations of genes for selection.
-    
-    Example:
-    --------
-    If `n=3`, the function returns:
-    [[1], [2], [3], [1,2], [1,3], [2,3], [1,2,3]]
-    
-    Parameters:
-    -----------
+    Generate all possible non-empty subsets of gene indices.
+
+    Produces:
+    • List of all possible gene subsets for exploration.
+
+    Parameters
+    ----------
     n : int
-        The total number of genes to consider.
-    
-    Returns:
-    --------
+        Total number of genes to consider.
+
+    Returns
+    -------
     list of list
-        A list containing all possible subsets of gene indices.
+        All possible non-empty subsets of gene indices.
     """
     all_combinations = []
     elements = list(range(1, n+1))
