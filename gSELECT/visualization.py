@@ -345,7 +345,6 @@ def plot_explorative_gene_selections(
     top_n=10,
     output_folder="output",
     cmap_name="Blues",
-    show_delta=False,
     annotate=True,
     dpi=600,
     csv_name="explorative_gene_subset_rankings.csv",
@@ -370,8 +369,6 @@ def plot_explorative_gene_selections(
         Directory for output files.
     cmap_name : str, default "Blues"
         Colormap for bars.
-    show_delta : bool, default False
-        If True, plot Δ-accuracy relative to the worst subset.
     annotate : bool, default True
         Show “mean ± std” text beside each bar.
     dpi : int, default 600
@@ -414,8 +411,7 @@ def plot_explorative_gene_selections(
     cmap = get_cmap(cmap_name)
     colors = [cmap(0.3 + 0.7*i/max(1, len(df_top)-1)) for i in range(len(df_top))]
 
-    worst = df_top["mean"].min()
-    x_vals = df_top["mean"] if not show_delta else df_top["mean"] - worst
+    x_vals = df_top["mean"]
     y_vals = np.arange(len(df_top))
 
     bars = ax.barh(
@@ -464,9 +460,7 @@ def plot_explorative_gene_selections(
     zoom_ratio = 0.2  # 20% margin on each side of the true range
 
     ax.set_xlim(x_min - span * zoom_ratio, x_max + span * zoom_ratio)
-    ax.set_xlabel("Δ Balanced Test Accuracy" if show_delta else "Balanced Test Accuracy",
-                  fontsize=11, weight="bold")
-
+    ax.set_xlabel("Balanced Test Accuracy", fontsize=11, weight="bold")
     ax.set_title(f"Top {len(df_top)} Gene Subsets", fontsize=14, weight="bold", pad=10)
     ax.xaxis.grid(True, linestyle="--", linewidth=0.6, alpha=0.6, zorder=0)
     ax.spines[['top', 'right', 'left']].set_visible(False)

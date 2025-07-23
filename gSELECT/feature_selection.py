@@ -11,7 +11,8 @@ def get_mutual_information(
     gene_list,
     min_datapoints=10,
     basis_log=2,
-    number_output_functions=1
+    number_output_functions=1,
+    bin_count=None
 ):
     """
     Compute mutual information scores for gene selection.
@@ -33,6 +34,8 @@ def get_mutual_information(
         Logarithm base for entropy calculation.
     number_output_functions : int, default 1
         Number of output variables to consider.
+    bin_count : int, default None (sturge's rule)
+        Number of bins for discretization.
 
     Returns
     -------
@@ -63,7 +66,10 @@ def get_mutual_information(
     list_variables = [i for i in range(number_output_functions)] + non_constant_features
 
     num_samples = expression_data.shape[1]
-    desired_number_of_bins = 10
+    #sturge's_rule(bin_count, num_samples)
+    desired_number_of_bins = 1 + int(np.log2(num_samples)) if bin_count is None else bin_count
+    print(f"Desired number of bins: {desired_number_of_bins}")
+    
     min_n_data_points_a_bin = max(min_datapoints, num_samples // desired_number_of_bins)
     min_n_data_points_a_bin = min(min_n_data_points_a_bin, num_samples // 2)
     
@@ -88,9 +94,9 @@ def compute_mutual_information(
     gene_names,
     expression_data,
     gene_list=None, 
-    top_mutual_information=1,
     min_datapoints=10, 
     basis_log=2,
+    bin_count=None,
     exclusion_list=[],
     should_save_mutual_info=True,
     output_folder="output"
@@ -116,6 +122,8 @@ def compute_mutual_information(
         Minimum data points for valid computation.
     basis_log : int, default 2
         Logarithm base for entropy calculation.
+    bin_count : int, default None (Sturge's rule)
+        Number of bins for discretization.
     exclusion_list : list of str, optional
         Genes to exclude from results.
     should_save_mutual_info : bool, default True
@@ -144,9 +152,9 @@ def compute_mutual_information(
             gene_names=gene_names,
             expression_data=expression_data,
             gene_list=gene_list if gene_list else None,
-            top_mutual_information=top_mutual_information if not gene_list else len(gene_list),
             min_datapoints=min_datapoints,
-            basis_log=basis_log
+            basis_log=basis_log,
+            bin_count=bin_count
         )
         # Sort by mutual information in descending order
         gene_mutual_information = gene_mutual_information.sort_values(
