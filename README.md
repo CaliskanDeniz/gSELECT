@@ -1,28 +1,21 @@
-# gSELECT: Gene Selection for Single-Cell Data
+# gSELECT: Gene Selection and Classification Toolkit for Single-Cell RNA-seq
 
-**gSELECT** is a Python package designed for gene selection in single-cell RNA sequencing (scRNA-seq) data. 
-It provides efficient methods for **feature selection**, **classification**, **data handling**, and **visualization** to facilitate downstream analysis.
-
----
-
-## Features
-
-- **Feature Selection**: Computes mutual information to identify informative genes.
-- **Gene Classification**: Implements a neural network classifier (MLP) to assess gene selection strategies.
-- **Data Loading & Exploration**: Handles `.h5ad` and CSV-based single-cell datasets.
-- **Visualization**: Plots classification performance and misclassification rates.
+**gSELECT** is a Python package for efficient gene selection and classification tailored for single-cell RNA sequencing (scRNA-seq) data.  
+It streamlines feature selection, model evaluation, and performance visualization - from raw `.h5ad` or `.csv` data to publication-ready plots.
 
 ---
 
 ## Installation
 
-```sh
+Install the latest stable release:
+
+```bash
 pip install gSELECT
 ```
 
-or for development:
+For development:
 
-```sh
+```bash
 git clone https://github.com/caliskandeniz/gSELECT.git
 cd gSELECT
 pip install -e .
@@ -32,86 +25,181 @@ pip install -e .
 
 ## Dependencies
 
-- `scanpy`
-- `pandas`
-- `numpy`
-- `matplotlib`
-- `scikit-learn`
-- `polars`
-- `scipy`
-- `principal_feature_analysis`
+- `scanpy`, `anndata`
+- `pandas`, `numpy`, `polars`, `scipy`
+- `scikit-learn`, `principal_feature_analysis`
+- `matplotlib`, `seaborn`
+- `pyarrow`, `openpyxl`, `psutil`, `tqdm`
+
 ---
 
-## Usage
+## Quick Start
 
-### **1. Loading Data**
-
-Load an `.h5ad` single-cell dataset and filter based on metadata:
+### 1. **Explore and Load Data**
 
 ```python
-from gSELECT.io import load_h5ad
+from gSELECT import io as gsio
 
-gene_names, expression_data = load_h5ad("data/dataset.h5ad", filter_column="cell_type", filter_values=["type1", "type2"])
+# Explore structure of .h5ad file
+gsio.explore_h5ad("data/sample.h5ad")
+
+# Load filtered expression data
+genes, data = gsio.load_h5ad(
+    "data/sample.h5ad",
+    filter_column="cell_type",
+    filter_values=["T cells", "B cells"]
+)
+
+# Or load from CSV
+genes, data = gsio.load("data/sample.csv")
 ```
 
 ---
 
-### **2. Feature Selection**
+### 2. **Optional: Create Train/Test Split**
 
-Compute mutual information to rank genes:
+```python
+# Transpose to (samples x genes)
+data_total = data.transpose()
+
+# Random 80/20 split
+training_data = data_total.sample(frac=0.8)
+test_data = data_total.drop(training_data.index)
+
+# Transpose back
+training_data = training_data.transpose()
+test_data = test_data.transpose()
+```
+
+---
+
+### 3. **Feature Selection (Mutual Information)**
 
 ```python
 from gSELECT.feature_selection import compute_mutual_information
 
-gene_mutual_info = compute_mutual_information(gene_names, expression_data, top_mutual_information=50)
+mi_scores = compute_mutual_information(
+    genes,
+    training_data,
+    exclusion_list=["GAPDH", "ACTB"],
+    output_folder="output"
+)
 ```
 
 ---
 
-### **3. Gene Classification**
-
-Run classification using selected genes:
+### 4. **Run Classifiers**
 
 ```python
 from gSELECT.classification import run_selected_genes
 
-results = run_selected_genes(expression_data, gene_mutual_info, number_sweeps=10, top_n_genes=5)
+results = run_selected_genes(
+    training_data,
+    mi_scores,
+    test_data=test_data,
+    number_sweeps=5,
+    top_n_genes=10,
+    include_random=True
+)
 ```
 
-Run classification with all genes:
-
-```python
-from gSELECT.classification import run_all_genes
-
-results = run_all_genes(expression_data, gene_mutual_info, number_sweeps=10)
-```
+You can also explore:
+- Multiple gene panel sizes: `run_multiple_gene_selections()`
+- Custom gene lists: `run_with_custom_gene_set()`
+- Exhaustive or greedy searches: `run_explorative_gene_selections()` and more
 
 ---
 
-### **4. Visualization**
-
-Plot classification results:
+### 5. **Visualize Results**
 
 ```python
 from gSELECT.visualization import plot_results
 
-plot_results(results)
+plot_results(
+    results,
+    output_folder="output",
+    save_csv=True,
+    save_png=True,
+    csv_name="results.csv",
+    dpi=300
+)
 ```
+
+---
+
+## Core Functionality
+
+### Data I/O
+
+| Function | Purpose |
+|---------|---------|
+| `explore_h5ad()` | Inspect `.h5ad` structure |
+| `load_h5ad()` | Load filtered `.h5ad` data |
+| `load()` | Load expression data from CSV |
+
+---
+
+### Feature Selection
+
+| Function | Purpose |
+|---------|---------|
+| `compute_mutual_information()` | Score genes based on MI vs. class labels |
+
+---
+
+### Classifiers
+
+| Function | Description |
+|----------|-------------|
+| `run_selected_genes()` | Classify with top N MI-ranked genes |
+| `run_multiple_gene_selections()` | Evaluate multiple panel sizes |
+| `run_with_custom_gene_set()` | Use a user-defined gene list |
+| `run_explorative_gene_selections()` | Exhaustive/greedy search of top N genes |
+| `run_explorative_gene_selections_with_custom_set()` | Exhaustive search on custom gene sets |
+| `run_all_genes()` | Use all non-constant genes |
+
+---
+
+### Visualization
+
+| Function | Description |
+|----------|-------------|
+| `plot_results()` | Accuracy & comparison (single strategy) |
+| `plot_multiple_gene_selections()` | Accuracy vs. panel size |
+| `plot_explorative_gene_selections()` | Rank subset performance |
+| `plot_all_genes()` | Visualize results from all genes |
+
+---
+
+## Output Summary
+
+Each classification run produces:
+- **Train/test accuracy**
+- **Misclassified samples**
+- **Number of genes used**
+- Optional CSV and PNG files for result sharing or publication
 
 ---
 
 ## Example Notebook
 
-An example Jupyter notebook demonstrating end-to-end usage is available under `examples/example_notebook.ipynb`.
+See `examples/example_notebook.ipynb` for a full walkthrough from data to visualization.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please create a pull request or open an issue for feature requests or bug reports.
+Pull requests and issues are welcome!  
+Start by cloning the repo and running:
+
+```bash
+pip install -e .
+```
+
+Then contribute via GitHub or submit ideas through issues.

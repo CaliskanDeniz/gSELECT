@@ -5,37 +5,43 @@ from scipy.sparse import issparse
 import principal_feature_analysis as pfa
 
 
-def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_information, min_datapoints=500, basis_log=2, number_output_functions=1):
+def get_mutual_information(
+    gene_names,
+    expression_data,
+    gene_list,
+    min_datapoints=10,
+    basis_log=2,
+    number_output_functions=1,
+    bin_count=None
+):
     """
-    Compute mutual information for gene selection.
-    
-    This function calculates mutual information scores between genes and a target variable 
-    to identify the most informative features for classification. If a gene list is provided, 
-    it verifies the presence of those genes and assigns mock mutual information values.
-    
-    Parameters:
-    -----------
+    Compute mutual information scores for gene selection.
+
+    Produces:
+    • DataFrame of mutual information scores for each gene.
+
+    Parameters
+    ----------
     gene_names : pd.DataFrame
         DataFrame containing gene names.
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
+        Gene expression data (cells × genes).
     gene_list : list of str or None
-        List of specific genes to evaluate. If None, computes mutual information for all genes.
-    top_mutual_information : int
-        Number of top genes to retain based on mutual information scores.
-    min_datapoints : int, optional (default=500)
-        Minimum number of data points required for valid mutual information computation.
-    basis_log : int, optional (default=2)
-        Base logarithm for entropy calculation.
-    number_output_functions : int, optional (default=1)
+        List of genes to evaluate. If None, computes for all genes.
+    min_datapoints : int, default 10
+        Minimum data points for valid computation.
+    basis_log : int, default 2
+        Logarithm base for entropy calculation.
+    number_output_functions : int, default 1
         Number of output variables to consider.
-    
-    Returns:
-    --------
-    pd.DataFrame
-        DataFrame containing mutual information scores for genes.
-    """
+    bin_count : int, default None (sturge's rule)
+        Number of bins for discretization.
 
+    Returns
+    -------
+    pd.DataFrame
+        Mutual information scores for genes.
+    """
     if gene_list:
         genes = gene_names["gene_name"]
         
@@ -56,16 +62,22 @@ def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_i
         
         return gene_mutual_information  
 
-    # Calculate mutual information
-    # non_constant_features = [i for i in range(expression_data.shape[0]) if expression_data.iloc[i].nunique() > 1]
     non_constant_features = np.where(np.ptp(expression_data, axis=1) > 0)[0].tolist()
     list_variables = [i for i in range(number_output_functions)] + non_constant_features
+
+    num_samples = expression_data.shape[1]
+    #sturge's_rule(bin_count, num_samples)
+    desired_number_of_bins = 1 + int(np.log2(num_samples)) if bin_count is None else bin_count
+    print(f"Desired number of bins: {desired_number_of_bins}")
+    
+    min_n_data_points_a_bin = max(min_datapoints, num_samples // desired_number_of_bins)
+    min_n_data_points_a_bin = min(min_n_data_points_a_bin, num_samples // 2)
     
     mutual_info_results = pfa.get_mutual_information(
         expression_data,
         number_output_functions,
         list_variables,
-        min_datapoints,
+        min_n_data_points_a_bin,
         basis_log
     )
     mutual_info_df = mutual_info_results[0]
@@ -78,44 +90,52 @@ def get_mutual_information( gene_names, expression_data, gene_list, top_mutual_i
     return gene_mutual_information
 
 
-def compute_mutual_information(gene_names, expression_data, gene_list=None, 
-                               top_mutual_information=1, min_datapoints=500, 
-                               basis_log=2, exclusion_list=[],
-                               should_save_mutual_info=True, output_folder="output"):
+def compute_mutual_information(
+    gene_names,
+    expression_data,
+    gene_list=None, 
+    min_datapoints=10, 
+    basis_log=2,
+    bin_count=None,
+    exclusion_list=[],
+    should_save_mutual_info=True,
+    output_folder="output"
+):
     """
-    Compute and optionally save mutual information scores.
-    
-    This function calculates mutual information for feature selection and optionally saves
-    the results to a CSV file. If a saved mutual information file already exists, it loads 
-    the precomputed values.
-    
-    Parameters:
-    -----------
+    Compute and optionally save mutual information scores for gene selection.
+
+    Produces:
+    • DataFrame of mutual information scores for each gene.
+    • Optionally saves results to CSV.
+
+    Parameters
+    ----------
     gene_names : pd.DataFrame
         DataFrame containing gene names.
     expression_data : np.ndarray
-        Gene expression data (cells x genes).
-    gene_list : list of str or None, optional (default=None)
-        List of specific genes to evaluate. If None, computes mutual information for all genes.
-    top_mutual_information : int, optional (default=1)
-        Number of top genes to retain based on mutual information scores.
-    min_datapoints : int, optional (default=500)
-        Minimum number of data points required for valid mutual information computation.
-    basis_log : int, optional (default=2)
-        Base logarithm for entropy calculation.
-    exclusion_list : list of str, optional (default=[])
-        List of genes to exclude from the final mutual information results.
-    should_save_mutual_info : bool, optional (default=True)
-        Whether to save the computed mutual information values to a CSV file.
-    output_folder : str, optional (default="output")
-        Directory where the CSV file will be saved.
-    
-    Returns:
-    --------
-    pd.DataFrame
-        DataFrame containing mutual information scores for genes.
-    """
+        Gene expression data (cells × genes).
+    gene_list : list of str or None, optional
+        List of genes to evaluate. If None, computes for all genes.
+    top_mutual_information : int, default 1
+        Number of top genes to retain.
+    min_datapoints : int, default 10
+        Minimum data points for valid computation.
+    basis_log : int, default 2
+        Logarithm base for entropy calculation.
+    bin_count : int, default None (Sturge's rule)
+        Number of bins for discretization.
+    exclusion_list : list of str, optional
+        Genes to exclude from results.
+    should_save_mutual_info : bool, default True
+        If True, save results to CSV.
+    output_folder : str, default "output"
+        Directory for output files.
 
+    Returns
+    -------
+    pd.DataFrame
+        Mutual information scores for genes.
+    """
     os.makedirs(output_folder, exist_ok=True)
 
     mutual_info_path = os.path.join(output_folder, "mutual_information.csv")
@@ -132,9 +152,9 @@ def compute_mutual_information(gene_names, expression_data, gene_list=None,
             gene_names=gene_names,
             expression_data=expression_data,
             gene_list=gene_list if gene_list else None,
-            top_mutual_information=top_mutual_information if not gene_list else len(gene_list),
             min_datapoints=min_datapoints,
-            basis_log=basis_log
+            basis_log=basis_log,
+            bin_count=bin_count
         )
         # Sort by mutual information in descending order
         gene_mutual_information = gene_mutual_information.sort_values(
