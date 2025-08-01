@@ -1,29 +1,21 @@
-# gSELECT: Gene Selection for Single-Cell Data
+# gSELECT: Gene Selection and Classification Toolkit for Single-Cell RNA-seq
 
-**gSELECT** is a Python package for gene selection and classification in single-cell RNA sequencing (scRNA-seq) data.  
-It provides efficient methods for **feature selection**, **classification**, **data handling**, and **visualization** to facilitate downstream analysis.
-
----
-
-## Features
-
-- **Feature Selection**: Compute mutual information to identify informative genes, with flexible options for exclusion, custom gene lists, and output control.
-- **Gene Classification**: Multiple entry points for classification using selected genes, custom gene sets, exhaustive or greedy subset search, and all non-constant genes.
-- **Data Loading & Exploration**: Load and filter `.h5ad` and CSV-based single-cell datasets; explore dataset structure and metadata.
-- **Visualization**: Publication-ready plots for classification performance, misclassification rates, and gene subset rankings.
-- **Utilities**: Memory usage logging, unique file naming, and more.
+**gSELECT** is a Python package for efficient gene selection and classification tailored for single-cell RNA sequencing (scRNA-seq) data.  
+It streamlines feature selection, model evaluation, and performance visualization - from raw `.h5ad` or `.csv` data to publication-ready plots.
 
 ---
 
 ## Installation
 
-```sh
+Install the latest stable release:
+
+```bash
 pip install gSELECT
 ```
 
-or for development:
+For development:
 
-```sh
+```bash
 git clone https://github.com/caliskandeniz/gSELECT.git
 cd gSELECT
 pip install -e .
@@ -33,174 +25,181 @@ pip install -e .
 
 ## Dependencies
 
-- `scanpy`
-- `anndata`
-- `pandas`
-- `numpy`
-- `matplotlib`
-- `seaborn`
-- `scikit-learn`
-- `polars`
-- `scipy`
-- `psutil`
-- `principal_feature_analysis`
-- `tqdm`
-- `openpyxl`
-- `pyarrow`
+- `scanpy`, `anndata`
+- `pandas`, `numpy`, `polars`, `scipy`
+- `scikit-learn`, `principal_feature_analysis`
+- `matplotlib`, `seaborn`
+- `pyarrow`, `openpyxl`, `psutil`, `tqdm`
 
 ---
 
-## Usage
+## Quick Start
 
-### 1. Data Loading & Exploration
-
-**Explore an `.h5ad` dataset:**
+### 1. **Explore and Load Data**
 
 ```python
-from gSELECT.io import explore_h5ad
+from gSELECT import io as gsio
 
-explore_h5ad("data/dataset.h5ad")
-```
+# Explore structure of .h5ad file
+gsio.explore_h5ad("data/sample.h5ad")
 
-**Load and filter an `.h5ad` dataset:**
-
-```python
-from gSELECT.io import load_h5ad
-
-gene_names, expression_data = load_h5ad(
-    "data/dataset.h5ad",
+# Load filtered expression data
+genes, data = gsio.load_h5ad(
+    "data/sample.h5ad",
     filter_column="cell_type",
-    filter_values=["type1", "type2"]
+    filter_values=["T cells", "B cells"]
 )
-```
 
-**Load from CSV:**
-
-```python
-from gSELECT.io import load
-
-gene_names, expression_data = load("data/dataset.csv")
+# Or load from CSV
+genes, data = gsio.load("data/sample.csv")
 ```
 
 ---
 
-### 2. Feature Selection
+### 2. **Optional: Create Train/Test Split**
 
-**Compute mutual information scores with all options:**
+```python
+# Transpose to (samples x genes)
+data_total = data.transpose()
+
+# Random 80/20 split
+training_data = data_total.sample(frac=0.8)
+test_data = data_total.drop(training_data.index)
+
+# Transpose back
+training_data = training_data.transpose()
+test_data = test_data.transpose()
+```
+
+---
+
+### 3. **Feature Selection (Mutual Information)**
 
 ```python
 from gSELECT.feature_selection import compute_mutual_information
 
-gene_mutual_info = compute_mutual_information(
-    gene_names,
-    expression_data,
-    gene_list=None,                  # Optional: restrict to specific genes
-    top_mutual_information=50,       # Number of top genes to retain
-    min_datapoints=10,               # Minimum samples per gene
-    basis_log=2,                     # Logarithm base for entropy
-    exclusion_list=["ACTB", "GAPDH"],# Exclude specific genes
-    should_save_mutual_info=True,    # Save results to CSV
-    output_folder="output"           # Output directory
+mi_scores = compute_mutual_information(
+    genes,
+    training_data,
+    exclusion_list=["GAPDH", "ACTB"],
+    output_folder="output"
 )
 ```
 
 ---
 
-### 3. Gene Classification
-
-**Available entry points:**
-
-| Function | Purpose | Input | Output |
-|----------|--------|-------|--------|
-| `run_selected_genes` | Classify using top N genes | data, MI, N | results list |
-| `run_multiple_gene_selections` | Compare multiple panel sizes | data, MI, list of N | results dict |
-| `run_with_custom_gene_set` | Use user-defined gene list | data, gene names, MI | results list |
-| `run_explorative_gene_selections` | Exhaustive/greedy search of top N | data, MI, N | results dict |
-| `run_explorative_gene_selections_with_custom_set` | Exhaustive search of custom set | data, gene names, MI | results dict |
-| `run_all_genes` | Use all non-constant genes | data, MI | results list |
-
-**Example usage:**
+### 4. **Run Classifiers**
 
 ```python
-from gSELECT.classification import (
-    run_selected_genes,
-    run_multiple_gene_selections,
-    run_with_custom_gene_set,
-    run_explorative_gene_selections,
-    run_explorative_gene_selections_with_custom_set,
-    run_all_genes
+from gSELECT.classification import run_selected_genes
+
+results = run_selected_genes(
+    training_data,
+    mi_scores,
+    test_data=test_data,
+    number_sweeps=5,
+    top_n_genes=10,
+    include_random=True
 )
-
-# Top N genes
-results = run_selected_genes(expression_data, gene_mutual_info, test_data=test_data, number_sweeps=10, top_n_genes=5)
-
-# Multiple panel sizes
-results_dict = run_multiple_gene_selections(expression_data, gene_mutual_info, test_data=test_data, number_sweeps=10, gene_selection=[1, 2, 5, 10, 100])
-
-# Custom gene set
-results = run_with_custom_gene_set(expression_data, ["GeneA", "GeneB"], gene_mutual_info, test_data=test_data, number_sweeps=10)
-
-# Exhaustive/greedy search of top N
-results_dict = run_explorative_gene_selections(expression_data, gene_mutual_info, test_data=test_data, number_sweeps=2, top_n_genes=11)
-
-# Exhaustive search of custom set
-results_dict = run_explorative_gene_selections_with_custom_set(expression_data, ["GeneA", "GeneB"], gene_mutual_info, test_data=test_data, number_sweeps=2)
-
-# All non-constant genes
-results = run_all_genes(expression_data, gene_mutual_info, test_data=test_data, number_sweeps=10)
 ```
+
+You can also explore:
+- Multiple gene panel sizes: `run_multiple_gene_selections()`
+- Custom gene lists: `run_with_custom_gene_set()`
+- Exhaustive or greedy searches: `run_explorative_gene_selections()` and more
 
 ---
 
-### 4. Visualization
-
-**Available entry points:**
-
-| Function | Purpose | Input | Output |
-|----------|--------|-------|--------|
-| `plot_results` | Compare strategies | results list | PNG, CSV |
-| `plot_multiple_gene_selections` | Panel size sweep | results dict | PNG, CSV |
-| `plot_explorative_gene_selections` | Subset ranking | results dict | PNG, CSV |
-| `plot_all_genes` | All strategies | results list | PNG, CSV |
-
-**Example usage:**
+### 5. **Visualize Results**
 
 ```python
-from gSELECT.visualization import (
-    plot_results,
-    plot_multiple_gene_selections,
-    plot_explorative_gene_selections,
-    plot_all_genes
-)
+from gSELECT.visualization import plot_results
 
-plot_results(results, output_folder="output")
-plot_multiple_gene_selections(results_dict, output_folder="output")
-plot_explorative_gene_selections(results_dict, output_folder="output")
-plot_all_genes(results, output_folder="output")
+plot_results(
+    results,
+    output_folder="output",
+    save_csv=True,
+    save_png=True,
+    csv_name="results.csv",
+    dpi=300
+)
 ```
 
 ---
 
-### 5. Utilities
+## Core Functionality
 
-- `get_memory_usage_mb()`: Returns current memory usage in MB.
-- `log_peak_memory_usage()`: Logs peak RAM usage.
-- `save_dataframe_to_csv()`, `save_figure_png()`: Save results and figures with unique filenames.
+### Data I/O
+
+| Function | Purpose |
+|---------|---------|
+| `explore_h5ad()` | Inspect `.h5ad` structure |
+| `load_h5ad()` | Load filtered `.h5ad` data |
+| `load()` | Load expression data from CSV |
+
+---
+
+### Feature Selection
+
+| Function | Purpose |
+|---------|---------|
+| `compute_mutual_information()` | Score genes based on MI vs. class labels |
+
+---
+
+### Classifiers
+
+| Function | Description |
+|----------|-------------|
+| `run_selected_genes()` | Classify with top N MI-ranked genes |
+| `run_multiple_gene_selections()` | Evaluate multiple panel sizes |
+| `run_with_custom_gene_set()` | Use a user-defined gene list |
+| `run_explorative_gene_selections()` | Exhaustive/greedy search of top N genes |
+| `run_explorative_gene_selections_with_custom_set()` | Exhaustive search on custom gene sets |
+| `run_all_genes()` | Use all non-constant genes |
+
+---
+
+### Visualization
+
+| Function | Description |
+|----------|-------------|
+| `plot_results()` | Accuracy & comparison (single strategy) |
+| `plot_multiple_gene_selections()` | Accuracy vs. panel size |
+| `plot_explorative_gene_selections()` | Rank subset performance |
+| `plot_all_genes()` | Visualize results from all genes |
+
+---
+
+## Output Summary
+
+Each classification run produces:
+- **Train/test accuracy**
+- **Misclassified samples**
+- **Number of genes used**
+- Optional CSV and PNG files for result sharing or publication
 
 ---
 
 ## Example Notebook
 
-A comprehensive Jupyter notebook demonstrating end-to-end usage is available under `examples/example_notebook.ipynb`.
+See `examples/example_notebook.ipynb` for a full walkthrough from data to visualization.
 
 ---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please create a pull request or open an issue for feature requests or bug reports.
+Pull requests and issues are welcome!  
+Start by cloning the repo and running:
+
+```bash
+pip install -e .
+```
+
+Then contribute via GitHub or submit ideas through issues.
