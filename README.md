@@ -203,3 +203,6 @@ pip install -e .
 ```
 
 Then contribute via GitHub or submit ideas through issues.
+
+If you use gSELECT or the provided Python scripts for further extensions or variations of this framework, please cite our paper `gSELECT: A novel pre-analysis machine-learning library enabling early hypothesis testing and predictive gene selection in single-cell data` (https://doi.org/10.1016/j.csbj.2025.07.047
+), in the course of which the Python implementations of this repository were developed.
